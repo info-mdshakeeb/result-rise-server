@@ -260,7 +260,7 @@ app.get("/notice", async (req, res) => {
     const query = {};
     const noticeData = await NoticeCollection.find(query);
     const notice = await noticeData.toArray();
-    console.log('notice data', notice);
+    // console.log('notice data', notice);
     res.send(notice);
 });
 
