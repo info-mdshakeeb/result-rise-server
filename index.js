@@ -180,6 +180,7 @@ app.get("/reports/:type", async (req, res) => {
         res.send(error.message);
     }
 });
+
 // delete a reportData :
 app.delete("/reports/:id", async (req, res) => {
     const { id } = req.params;
