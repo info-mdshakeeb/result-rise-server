@@ -180,6 +180,33 @@ app.get("/reports/:type", async (req, res) => {
         res.send(error.message);
     }
 });
+//get a query students :
+
+app.get("/students", async (req, res) => {
+    const { admission, department, subject } = req.query;
+    // console.log(admission, department, subject);
+    const query = { admissions: admission };
+    const students = await studentResult.find(query).toArray();
+    console.log(students);
+    res.send(students);
+});
+
+//update a student result
+app.put("/addResult/:id", async (req, res) => {
+    const { id } = req.params;
+    const studentResult = req.body;
+    console.log(id, studentResult);
+    // const filter = { id: id };
+    // const options = { upsert: true };
+    // const updatedDoc = {
+    //     $set: {
+    //         resolved: true,
+    //         result: studentResult,
+    //     }
+    // }
+    // const result = await studentResult.updateOne(filter, updatedDoc, options);
+    // res.send(result)
+});
 
 // delete a reportData :
 app.delete("/reports/:id", async (req, res) => {
