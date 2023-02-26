@@ -2,16 +2,65 @@ const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
+const { Server } = require("socket.io");
 const port = process.env.PORT || 3100;
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
-
 const app = express();
 const uri = `mongodb+srv://result-rise-db-user:8atFxiIp8yCahDc6@result-rise-db.g6bidmr.mongodb.net/?retryWrites=true&w=majority`;
 // console.log(uri);
-
 // middleware
 app.use(cors());
 app.use(express.json());
+const http = require("http");
+const httpServer = http.createServer(app);
+
+const io = new Server(httpServer, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"],
+    },
+});
+let users = [];
+
+const addUser = (userEmail, socketId, userInfo) => {
+    const checkUser = users.some(u => u.userEmail === userEmail)
+    if (!checkUser) {
+        users.push({ userEmail, socketId, userInfo })
+    }
+}
+const removeUser = (socketId) => {
+    users = users.filter(u => u.socketId !== socketId)
+}
+const findFriend = (id) => {
+    return users.find(u => u.userEmail === id)
+}
+io.on('connection', (socket) => {
+    console.log('user connected');
+    socket.on("addUsers", (userEmail, userInfo) => {
+        addUser(userEmail, socket.id, userInfo)
+        io.emit("getUser", users);
+        socket.emit("connected");
+    })
+    socket.on("sendMessage", (data) => {
+        const user = findFriend(data.receiverid);
+        console.log('send message server data', data);
+        if (user !== undefined) {
+            socket.to(user.socketId).emit("getMessage", {
+                senderEmail: data.senderEmail,
+                senderName: data.senderName,
+                senderPhoto: data.senderPhoto,
+                time: data.time,
+                receiverid: data.receiverid,
+                message: data.message
+            })
+        }
+    })
+    socket.on('disconnect', () => {
+        console.log('user disconnected');
+        removeUser(socket.id);
+        io.emit("getUser", users)
+    })
+})
 const client = new MongoClient(uri, {
     useNewUrlParser: true,
     useUnifiedTopology: true,
@@ -31,6 +80,7 @@ const usersCollection = db.collection("users");
 const studentResult = db.collection("studentResultData")
 const studentsReportCollection = db.collection("studentsReport")
 const NoticeCollection = db.collection('notices')
+const messageCollection = db.collection("allMessages");
 
 // post a user
 app.post("/users", async (req, res) => {
@@ -295,6 +345,35 @@ app.get("/notice", async (req, res) => {
 app.get("/", (req, res) => {
     res.send("ResultRise Server is running");
 });
-app.listen(port, () => {
+//socket io :
+//send message
+app.post("/message", async (req, res) => {
+    const msg = req.body;
+    try {
+        const result = await messageCollection.insertOne(msg);
+        console.log('send message', result);
+        res.send(result);
+    } catch (error) {
+        res.send(error.message);
+    }
+});
+app.get("/message/:senderEmail/:receiverEmail", async (req, res) => {
+    const senderEmail = req.params.senderEmail;
+    const receiverId = req.params.receiverEmail;
+    try {
+        let getAllmessage = await messageCollection.find({}).toArray();
+        getAllmessage = getAllmessage.filter(
+            (m) =>
+                (m.senderEmail === senderEmail && m.receiverid === receiverId) ||
+                (m.receiverid === senderEmail && m.senderEmail === receiverId)
+        );
+        res.send(getAllmessage);
+    } catch (error) {
+        res.send(error.message);
+    }
+});
+
+
+httpServer.listen(port, () => {
     console.log("Listening to port", port);
 });
