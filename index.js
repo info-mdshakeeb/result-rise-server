@@ -281,7 +281,7 @@ app.put("/resolved/:id", async (req, res) => {
 // get result form outside Login
 app.post('/students/outsied', async (req, res) => {
     const { id, registration, department, semister } = req.body;
-    console.log('details', id, registration, department, semister);
+    // console.log('details', id, registration, department, semister);
     const query = { student_id: id, registration_number: registration, department };
     try {
         const student = await studentResult.findOne(query);
